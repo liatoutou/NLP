@@ -1,45 +1,36 @@
 import numpy as np
-from sklearn.preprocessing import normalize
 import codecs
+from sklearn.preprocessing import normalize
 
 vocab = codecs.open("brown_vocab_100.txt")
 
-# Load the indices dictionary
-word_index_dict = {}
-for i, line in enumerate(vocab):
-    word = line.rstrip()
-    word_index_dict[word] = i
+word_index_dict = {k.rstrip(): v for v, k in enumerate(vocab.read().splitlines())}
+counts = np.zeros((len(word_index_dict), len(word_index_dict), len(word_index_dict)))# + 0.1
 
 f = codecs.open("brown_100.txt")
+for l in f.read().splitlines():
+    indices = np.apply_along_axis(lambda x: np.array([word_index_dict[i.lower()] for i in x]), 1, 
+                                  np.lib.stride_tricks.sliding_window_view(np.array(l.split()), 3))
+    # print(indices)
+    np.add.at(counts, (indices[:, 0], indices[:, 1], indices[:, 2]), 1)
 
-# Create trigram counts matrix
-trigram_counts = np.zeros((len(word_index_dict), len(word_index_dict), len(word_index_dict)), dtype=float)
+unsmoothed_probs = counts / counts.sum(axis=2)[:,:, np.newaxis]
+smoothed_probs = (counts + 0.1) / (counts + 0.1).sum(axis=2)[:,:, np.newaxis]
+# probs = probs.reshape(len(word_index_dict), len(word_index_dict), len(word_index_dict))
 
-# Update trigram counts from the corpus
-for sentence in f:
-    words = sentence.lower().split()
-    for i in range(len(words) - 2):
-        if words[i] in word_index_dict and words[i+1] in word_index_dict and words[i+2] in word_index_dict:
-            trigram_counts[word_index_dict[words[i]], word_index_dict[words[i+1]], word_index_dict[words[i+2]]] += 1
+spec_ind = np.array([
+    [word_index_dict["in"], word_index_dict["the"], word_index_dict["past"]],
+    [word_index_dict["in"], word_index_dict["the"], word_index_dict["time"]],
+    [word_index_dict["the"], word_index_dict["jury"], word_index_dict["recommended"]],
+    [word_index_dict["jury"], word_index_dict["said"], word_index_dict["that"],],
+    [word_index_dict["agriculture"], word_index_dict["teacher"], word_index_dict[","]],
+])
+
+spec_probs_uns = unsmoothed_probs[spec_ind[:, 0], spec_ind[:, 1], spec_ind[:, 2]]
+spec_probs_smo = smoothed_probs[spec_ind[:, 0], spec_ind[:, 1], spec_ind[:, 2]]
+print(spec_probs_uns)
+print(spec_probs_smo)
+
+
 
 f.close()
-unsmoothed_probs = trigram_counts / trigram_counts.sum()
-
-# Add alpha for smoothing
-alpha = 0.1
-smoothed_counts = trigram_counts + alpha
-smoothed_probs = smoothed_counts / smoothed_counts.sum()
-trigrams = [
-    ("in", "the", "past"),
-    ("in", "the", "time"),
-    ("the", "jury", "said"),
-    ("the", "jury", "recommended"),
-    ("jury", "said", "that"),
-    ("agriculture", "teacher", ",")
-]
-for trigram in trigrams:
-    unsmoothed_prob = unsmoothed_probs[word_index_dict[trigram[0]], word_index_dict[trigram[1]], word_index_dict[trigram[2]]]
-    smoothed_prob = smoothed_probs[word_index_dict[trigram[0]], word_index_dict[trigram[1]], word_index_dict[trigram[2]]]
-    print(f"Unsmoothed p({trigram[2]} | {trigram[0]}, {trigram[1]}): {unsmoothed_prob}")
-    print(f"Smoothed p({trigram[2]} | {trigram[0]}, {trigram[1]}): {smoothed_prob}")
-    print()
