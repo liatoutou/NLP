@@ -60,3 +60,9 @@ for sentence in toy_corpus:
 
 output_file.close()
 toy_corpus.close()
+generated_sentences = open("bigram_generation.txt", "w")
+for _ in range(10):
+    sentence = GENERATE(word_index_dict, probs, "bigram", 50, "<s>")
+    generated_sentences.write(sentence.strip() + "\n")
+generated_sentences.close()
+
