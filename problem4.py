@@ -62,3 +62,8 @@ for sentence in toy_corpus:
 
 output_file.close()
 toy_corpus.close()
+generated_sentences = open("smoothed_generation.txt", "w")
+for _ in range(10):
+    sentence = GENERATE(word_index_dict, smooth_probs, "bigram", 50, "<s>")
+    generated_sentences.write(sentence.strip() + "\n")
+generated_sentences.close()
