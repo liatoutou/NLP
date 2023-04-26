@@ -55,3 +55,8 @@ for sentence in toy_corpus:
 
 output_file.close()
 toy_corpus.close()
+generated_sentences = open("unigram_generation.txt", "w")
+for _ in range(10):
+    sentence = GENERATE(word_index_dict, probs, "unigram", 50, None)
+    generated_sentences.write(sentence.strip() + "\n")
+generated_sentences.close()
